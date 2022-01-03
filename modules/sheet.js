@@ -18,11 +18,11 @@ const DEFAULT_TOKEN = {
 export class ClockSheet extends ActorSheet {
   static get defaultOptions() {
     const supportedSystem = getSystemMapping(game.data.system.id);
-	  return mergeObject(
+	  return foundry.utils.mergeObject(
       super.defaultOptions,
       {
         classes: ["clocks", "sheet", `clocks-system-${game.data.system.id}`, "actor", "npc"],
-        template: "/modules/clocks/templates/sheet.html",
+        template: "modules/clocks/templates/sheet.html",
         width: 350,
         height: 525,
         ...supportedSystem.sheetDefaultOptions
@@ -47,7 +47,7 @@ export class ClockSheet extends ActorSheet {
 
   getData () {
     const clock = new Clock(this.system.loadClockFromActor({ actor: this.actor }));
-    return mergeObject(super.getData(), {
+    return foundry.utils.mergeObject(super.getData(), {
       clock: {
         progress: clock.progress,
         size: clock.size,
@@ -71,19 +71,19 @@ export class ClockSheet extends ActorSheet {
     html.find("button[name=minus]").click(async (ev) => {
       ev.preventDefault();
       const oldClock = new Clock(this.system.loadClockFromActor({ actor: this.actor }));
-      this.updateClock(oldClock.decrement());
+      await this.updateClock(oldClock.decrement());
     });
 
     html.find("button[name=plus]").click(async (ev) => {
       ev.preventDefault();
       const oldClock = new Clock(this.system.loadClockFromActor({ actor: this.actor }));
-      this.updateClock(oldClock.increment());
+      await this.updateClock(oldClock.increment());
     });
 
     html.find("button[name=reset]").click(async (ev) => {
       ev.preventDefault();
       const oldClock = new Clock(this.system.loadClockFromActor({ actor: this.actor }));
-      this.updateClock(new Clock({
+      await this.updateClock(new Clock({
         theme: oldClock.theme,
         progress: 0,
         size: oldClock.size
@@ -111,7 +111,7 @@ export class ClockSheet extends ActorSheet {
     // update associated tokens
     const tokens = actor.getActiveTokens();
     for (const t of tokens) {
-      await t.update({
+      await t.document.update({
         name: actor.name,
         img: clock.image.img,
         actorLink: true
@@ -127,6 +127,147 @@ export class ClockSheet extends ActorSheet {
         ...DEFAULT_TOKEN
       }
     };
-    await actor.update(mergeObject(visualObj, persistObj));
+    await actor.update(foundry.utils.mergeObject(visualObj, persistObj));
   }
 }
+
+export default {
+
+  renderTokenHUD: async (_hud, html, token) => {
+
+    log("Render")
+    let t = canvas.tokens.get(token.id);
+    let a = game.actors.get(token.actorId);
+
+    if( !a?.data?.flags?.clocks ) {
+      return false;
+    }
+
+    const button1HTML = await renderTemplate('modules/clocks/templates/buttons-left.html');
+    const button2HTML = await renderTemplate('modules/clocks/templates/buttons-right.html');
+
+    html.find("div.left").append(button1HTML).click(async (event) => {
+      log("HUD Clicked")
+      // re-get in case there has been an update
+      t = canvas.tokens.get(token.id);
+
+      const oldClock = new Clock(a.data.flags.clocks);
+      let newClock;
+
+      const target = event.target.classList.contains("control-icon")
+        ? event.target
+        : event.target.parentElement;
+      if (target.classList.contains("cycle-size")) {
+        newClock = oldClock.cycleSize();
+      } else if (target.classList.contains("cycle-theme")) {
+        newClock = oldClock.cycleTheme();
+      } else if (target.dataset.action) {
+        return;
+      } else {
+        return error("ERROR: Unknown TokenHUD Button");
+      }
+
+      const persistObj = {
+        flags: {
+          clocks: {
+            progress: newClock.progress,
+            size: newClock.size,
+            theme: newClock.theme
+          }
+        }
+      };
+
+      const visualObj = {
+        img: newClock.image.img,
+        token: {
+          img: newClock.image.img,
+          ...DEFAULT_TOKEN
+        }
+      };
+
+      let newObj = foundry.utils.mergeObject(visualObj, persistObj);
+      let tokenObj = {};
+      let update = [];
+      update.push( foundry.utils.mergeObject( { "_id": a.id }, newObj ) );
+      await Actor.updateDocuments(update);
+
+      update = [];
+      const tokens = a.getActiveTokens();
+      for (const t of tokens) {
+        tokenObj = {
+          _id: t.id,
+          name: a.name,
+          img: newClock.image.img,
+          flags: newClock.flags,
+          actorLink: true
+        };
+        update.push(tokenObj);
+      }
+
+      await TokenDocument.updateDocuments(update, {parent: game.scenes.current});
+    });
+
+
+    html.find("div.right").append(button2HTML).click(async (event) => {
+      log("HUD Clicked")
+      // re-get in case there has been an update
+      t = canvas.tokens.get(token.id);
+
+      const oldClock = new Clock(a.data.flags.clocks);
+      let newClock;
+
+      const target = event.target.classList.contains("control-icon")
+        ? event.target
+        : event.target.parentElement;
+      if (target.classList.contains("progress-up")) {
+        newClock = oldClock.increment();
+      } else if (target.classList.contains("progress-down")) {
+        newClock = oldClock.decrement();
+      } else if (target.dataset.action) {
+        return;
+      } else {
+        return error("ERROR: Unknown TokenHUD Button");
+      }
+
+      const persistObj = {
+        flags: {
+          clocks: {
+            progress: newClock.progress,
+            size: newClock.size,
+            theme: newClock.theme
+          }
+        }
+      };
+
+      const visualObj = {
+        img: newClock.image.img,
+        token: {
+          img: newClock.image.img,
+          ...DEFAULT_TOKEN
+        }
+      };
+
+      let newObj = foundry.utils.mergeObject(visualObj, persistObj);
+      let tokenObj = {};
+      let update = [];
+      update.push( foundry.utils.mergeObject( { "_id": a.id }, newObj ) );
+      await Actor.updateDocuments(update);
+
+      update = [];
+      const tokens = a.getActiveTokens();
+      for (const t of tokens) {
+        tokenObj = {
+          _id: t.id,
+          name: a.name,
+          img: newClock.image.img,
+          flags: newClock.flags,
+          actorLink: true
+        };
+        update.push(tokenObj);
+      }
+
+      await TokenDocument.updateDocuments(update, {parent: game.scenes.current});
+    });
+    return true;
+  }}
+

@@ -9,7 +9,7 @@ const onClick = async () => {
     y: ((canvas.dimensions.sceneRect.height - clock.image.height) / 2) + canvas.dimensions.paddingY
   };
 
-  const tile = new Tile({
+  const tile = new TileDocument({
     img: clock.image.img,
     width: clock.image.width,
     height: clock.image.height,
@@ -21,7 +21,7 @@ const onClick = async () => {
     locked: false,
     flags: clock.flags
   });
-  canvas.scene.createEmbeddedEntity('Tile', tile.data);
+  await canvas.scene.createEmbeddedDocuments('Tile', [tile.data]);
 };
 
 export default {
@@ -38,36 +38,57 @@ export default {
 
   renderTileHUD: async (_hud, html, tile) => {
     log("Render")
-    let t = canvas.tiles.get(tile._id);
+    let t = canvas.foreground.get(tile._id);
     if (!t.data.flags.clocks) {
       return;
     }
 
-    const buttonHTML = await renderTemplate('/modules/clocks/templates/buttons.html');
-    html.find("div.left").append(buttonHTML).click(async (event) => {
-      log("HUD Clicked")
+    const buttonLeftHTML = await renderTemplate('modules/clocks/templates/buttons-left.html');
+    html.find("div.left").append(buttonLeftHTML).click(async (event) => {
+      log( "HUD Clicked" )
       // re-get in case there has been an update
-      t = canvas.tiles.get(tile._id);
+      t = canvas.foreground.get( tile._id );
 
-      const oldClock = new Clock(t.data.flags.clocks);
+      const oldClock = new Clock( t.data.flags.clocks );
       let newClock;
 
-      const target = event.target.classList.contains("control-icon")
+      const target = event.target.classList.contains( "control-icon" )
         ? event.target
         : event.target.parentElement;
-      if (target.classList.contains("cycle-size")) {
+      if( target.classList.contains( "cycle-size" ) ) {
         newClock = oldClock.cycleSize();
-      } else if (target.classList.contains("cycle-theme")) {
+      } else if( target.classList.contains( "cycle-theme" ) ) {
         newClock = oldClock.cycleTheme();
-      } else if (target.classList.contains("progress-up")) {
+      } else {
+        return error( "ERROR: Unknown TileHUD Button" );
+      }
+      await t.document.update({
+        img: newClock.image.img,
+        flags: newClock.flags
+      });
+    });
+
+    const buttonRightHTML = await renderTemplate('modules/clocks/templates/buttons-right.html');
+    html.find("div.right").append(buttonRightHTML).click(async (event) => {
+      log( "HUD Clicked" )
+      // re-get in case there has been an update
+      t = canvas.foreground.get( tile._id );
+
+      const oldClock = new Clock( t.data.flags.clocks );
+      let newClock;
+
+      const target = event.target.classList.contains( "control-icon" )
+        ? event.target
+        : event.target.parentElement;
+      if( target.classList.contains( "progress-up" ) ) {
         newClock = oldClock.increment();
-      } else if (target.classList.contains("progress-down")) {
+      } else if( target.classList.contains( "progress-down" ) ) {
         newClock = oldClock.decrement();
       } else {
-        return error("ERROR: Unknown TileHUD Button");
+        return error( "ERROR: Unknown TileHUD Button" );
       }
 
-      await t.update({
+      await t.document.update({
         img: newClock.image.img,
         flags: newClock.flags
       });
