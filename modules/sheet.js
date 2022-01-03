@@ -9,7 +9,6 @@ const DISPOSITION = {
   NEUTRAL: 0
 };
 const DEFAULT_TOKEN = {
-  scale: 1,
   disposition: DISPOSITION.NEUTRAL,
   displayName: DISPLAY_NAME.ALWAYS_FOR_EVERYONE,
   actorLink: true
