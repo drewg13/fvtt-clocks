@@ -4,14 +4,10 @@ Create [Blades in the Dark](https://bladesinthedark.com/)-esque [progress clocks
 
 ## Installation
 
-Install directly from within [Foundry VTT's package browser](https://foundryvtt.com/packages/clocks/):
-
-https://foundryvtt.com/packages/clocks/
-
-Or, install manually with [this Manifest URL](https://raw.githubusercontent.com/troygoode/fvtt-clocks/main/module.json):
+Install manually with [this Manifest URL](https://raw.githubusercontent.com/drewg13/fvtt-clocks/main/module.json):
 
 ```
-https://raw.githubusercontent.com/troygoode/fvtt-clocks/main/module.json
+https://raw.githubusercontent.com/drewg13/fvtt-clocks/main/module.json
 ```
 
 ## Demos
