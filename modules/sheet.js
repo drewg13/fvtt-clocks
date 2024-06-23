@@ -16,11 +16,11 @@ const DEFAULT_TOKEN = {
 
 export class ClockSheet extends ActorSheet {
   static get defaultOptions() {
-    const supportedSystem = getSystemMapping(game.data.system.id);
+    const supportedSystem = getSystemMapping(game.system.id);
 	  return foundry.utils.mergeObject(
       super.defaultOptions,
       {
-        classes: ["clocks", "sheet", `clocks-system-${game.data.system.id}`, "actor", "npc"],
+        classes: ["clocks", "sheet", `clocks-system-${game.system.id}`, "actor", "npc"],
         template: "modules/clocks/templates/sheet.html",
         width: 350,
         height: 525,
@@ -30,14 +30,14 @@ export class ClockSheet extends ActorSheet {
   }
 
   static register () {
-    const supportedSystem = getSystemMapping(game.data.system.id);
+    const supportedSystem = getSystemMapping(game.system.id);
     Actors.registerSheet(supportedSystem.id, ClockSheet, supportedSystem.registerSheetOptions);
     log("Sheet Registered");
   }
 
   constructor (...args) {
     super(...args);
-    this._system = getSystemMapping(game.data.system.id);
+    this._system = getSystemMapping(game.system.id);
   }
 
   get system () {
@@ -52,14 +52,15 @@ export class ClockSheet extends ActorSheet {
         size: clock.size,
         theme: clock.theme,
         image: {
-          url: clock.image.img,
+          url: clock.image.texture.src,
           width: clock.image.width,
           height: clock.image.height
         },
         settings: {
           sizes: Clock.sizes,
           themes: Clock.themes
-        }
+        },
+        flags: clock.flags
       }
     });
   }
@@ -109,20 +110,27 @@ export class ClockSheet extends ActorSheet {
 
     // update associated tokens
     const tokens = actor.getActiveTokens();
-    for (const t of tokens) {
-      await t.document.update({
-        name: actor.name,
-        img: clock.image.img,
-        actorLink: true
-      });
+    if( tokens.length !== 0 ) {
+      let update = [];
+      let tokenObj = {};
+      for( const t of tokens ) {
+        tokenObj = {
+          _id: t.id,
+          name: actor.name,
+          texture: { src: clock.image.texture.src },
+          actorLink: true
+        };
+        update.push( tokenObj );
+      }
+      await TokenDocument.updateDocuments( update, { parent: game.scenes.current } );
     }
 
     // update the Actor
     const persistObj = await this.system.persistClockToActor({ actor, clock });
     const visualObj = {
-      img: clock.image.img,
+      img: clock.image.texture.src,
       token: {
-        img: clock.image.img,
+        texture: { src: clock.image.texture.src },
         ...DEFAULT_TOKEN
       }
     };
@@ -138,7 +146,7 @@ export default {
     let t = canvas.tokens.get(token.id);
     let a = game.actors.get(token.actorId);
 
-    if( !a?.data?.flags?.clocks ) {
+    if( !a?.flags?.clocks ) {
       return false;
     }
 
@@ -150,7 +158,7 @@ export default {
       // re-get in case there has been an update
       t = canvas.tokens.get(token.id);
 
-      const oldClock = new Clock(a.data.flags.clocks);
+      const oldClock = new Clock(a.flags.clocks);
       let newClock;
 
       const target = event.target.classList.contains("control-icon")
@@ -177,9 +185,9 @@ export default {
       };
 
       const visualObj = {
-        img: newClock.image.img,
+        img: newClock.image.texture.src,
         token: {
-          img: newClock.image.img,
+          texture: { src: newClock.image.texture.src },
           ...DEFAULT_TOKEN
         }
       };
@@ -196,7 +204,7 @@ export default {
         tokenObj = {
           _id: t.id,
           name: a.name,
-          img: newClock.image.img,
+          texture: { src: newClock.image.texture.src },
           flags: newClock.flags,
           actorLink: true
         };
@@ -212,7 +220,7 @@ export default {
       // re-get in case there has been an update
       t = canvas.tokens.get(token.id);
 
-      const oldClock = new Clock(a.data.flags.clocks);
+      const oldClock = new Clock(a.flags.clocks);
       let newClock;
 
       const target = event.target.classList.contains("control-icon")
@@ -239,9 +247,9 @@ export default {
       };
 
       const visualObj = {
-        img: newClock.image.img,
+        img: newClock.image.texture.src,
         token: {
-          img: newClock.image.img,
+          texture: { src: newClock.image.texture.src },
           ...DEFAULT_TOKEN
         }
       };
@@ -258,7 +266,7 @@ export default {
         tokenObj = {
           _id: t.id,
           name: a.name,
-          img: newClock.image.img,
+          texture: { src: newClock.image.texture.src },
           flags: newClock.flags,
           actorLink: true
         };

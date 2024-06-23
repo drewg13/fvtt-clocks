@@ -11,7 +11,7 @@ export default {
 
   persistClockToActor: ({ clock }) => {
     return {
-      data: {
+      system: {
         attributes: {
           hp: {
             value: clock.progress,

@@ -4,15 +4,20 @@ import { log, error } from "./util.js";
 const onClick = async () => {
   log('Tool Clicked');
   const clock = new Clock();
+  const {clientWidth, clientHeight} = document.documentElement;
+  const [cx, cy] = [clientWidth / 2, clientHeight / 2];
+  const t = canvas.stage.worldTransform;
+  const scale = canvas.stage.scale;
+  const [vx, vy] = [(cx - t.tx) / scale.x, (cy - t.ty) / scale.y];
   const dim = {
-    x: ((canvas.dimensions.sceneRect.width - clock.image.width) / 2) + canvas.dimensions.paddingX,
-    y: ((canvas.dimensions.sceneRect.height - clock.image.height) / 2) + canvas.dimensions.paddingY
+    x: (vx - clock.image.widthTile),
+    y: (vy - clock.image.heightTile)
   };
 
   const tile = new TileDocument({
-    img: clock.image.img,
-    width: clock.image.width,
-    height: clock.image.height,
+    texture: { src: clock.image.texture.src },
+    width: clock.image.widthTile,
+    height: clock.image.heightTile,
     x: dim.x,
     y: dim.y,
     z: 900,
@@ -21,7 +26,7 @@ const onClick = async () => {
     locked: false,
     flags: clock.flags
   });
-  await canvas.scene.createEmbeddedDocuments('Tile', [tile.data]);
+  await canvas.scene.createEmbeddedDocuments('Tile', [tile]);
 };
 
 export default {
@@ -38,8 +43,8 @@ export default {
 
   renderTileHUD: async (_hud, html, tile) => {
     log("Render")
-    let t = canvas.foreground.get(tile._id);
-    if (!t.data.flags.clocks) {
+    let t = canvas.tiles.get(tile._id);
+    if (!t.document.flags.clocks) {
       return;
     }
 
@@ -47,9 +52,9 @@ export default {
     html.find("div.left").append(buttonLeftHTML).click(async (event) => {
       log( "HUD Clicked" )
       // re-get in case there has been an update
-      t = canvas.foreground.get( tile._id );
+      t = canvas.tiles.get( tile._id );
 
-      const oldClock = new Clock( t.data.flags.clocks );
+      const oldClock = new Clock( t.document.flags.clocks );
       let newClock;
 
       const target = event.target.classList.contains( "control-icon" )
@@ -62,19 +67,20 @@ export default {
       } else {
         return error( "ERROR: Unknown TileHUD Button" );
       }
-      await t.document.update({
-        img: newClock.image.img,
+      await TileDocument.updateDocuments([{
+        _id: t.id,
+        texture: { src: newClock.image.texture.src },
         flags: newClock.flags
-      });
+      }], {parent: canvas.scene});
     });
 
     const buttonRightHTML = await renderTemplate('modules/clocks/templates/buttons-right.html');
     html.find("div.right").append(buttonRightHTML).click(async (event) => {
       log( "HUD Clicked" )
       // re-get in case there has been an update
-      t = canvas.foreground.get( tile._id );
+      t = canvas.tiles.get( tile._id );
 
-      const oldClock = new Clock( t.data.flags.clocks );
+      const oldClock = new Clock( t.document.flags.clocks );
       let newClock;
 
       const target = event.target.classList.contains( "control-icon" )
@@ -88,10 +94,11 @@ export default {
         return error( "ERROR: Unknown TileHUD Button" );
       }
 
-      await t.document.update({
-        img: newClock.image.img,
+      await TileDocument.updateDocuments([{
+        _id: t.id,
+        texture: { src: newClock.image.texture.src },
         flags: newClock.flags
-      });
+      }], {parent: canvas.scene});
     });
   }
 };
